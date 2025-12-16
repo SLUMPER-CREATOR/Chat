@@ -2,11 +2,6 @@
 
 Современное веб-приложение для общения в реальном времени, построенное на Django и WebSocket технологиях.
 
-![Python](https://img.shields.io/badge/Python-3.13-blue)
-![Django](https://img.shields.io/badge/Django-6.0-green)
-![WebSocket](https://img.shields.io/badge/WebSocket-Channels-orange)
-![License](https://img.shields.io/badge/License-MIT-yellow)
-
 ## 🚀 Возможности
 
 ### 💬 **Чаты**
@@ -28,29 +23,6 @@
 - **Адаптивный дизайн** - Работает на всех устройствах
 - **Современный UI** - TailwindCSS для красивого интерфейса
 - **Темная/светлая тема** - Удобство использования
-
-## 📸 Скриншоты
-
-### Общий чат
-![Общий чат](docs/screenshots/main-chat.png)
-
-### Личные сообщения
-![Личные сообщения](docs/screenshots/private-chat.png)
-
-### Групповые чаты
-![Групповые чаты](docs/screenshots/group-chat.png)
-
-### Профиль пользователя
-![Профиль](docs/screenshots/profile.png)
-
-## 🛠️ Технологический стек
-
-- **Backend:** Django 6.0, Django Channels 4.3.2
-- **WebSocket:** Daphne, Autobahn, Twisted
-- **Database:** SQLite (легко заменить на PostgreSQL/MySQL)
-- **Frontend:** HTML5, TailwindCSS, Vanilla JavaScript
-- **Images:** Pillow для обработки аватарок
-- **Real-time:** WebSocket для мгновенных сообщений
 
 ## 📦 Установка и запуск
 
@@ -257,5 +229,6 @@ CMD ["daphne", "chat_site.asgi:application", "--port", "8000", "--bind", "0.0.0.
 ![GitHub issues](https://img.shields.io/github/issues/yourusername/django-chat)
 
 ---
+
 
 ⭐ **Поставьте звезду, если проект вам понравился!**
