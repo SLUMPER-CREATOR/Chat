@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto p-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div class="flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-gray-800">Групповые чаты</h1>
+            <div class="flex space-x-3">
+                <a href="{% url 'create_group' %}" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
+                    Создать группу
+                </a>
+                <a href="{% url 'private_chats' %}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                    Личные
+                </a>
+                <a href="{% url 'room' %}" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition">
+                    Общий чат
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Мои группы -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Мои группы</h2>
+                
+                {% if group_data %}
+                    <div class="space-y-3">
+                        {% for item in group_data %}
+                            <div class="p-4 border rounded-lg hover:bg-gray-50 transition">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        {% if item.group.avatar %}
+                                            <img src="{{ item.group.avatar.url }}" alt="Аватар группы" class="w-12 h-12 rounded-full object-cover">
+                                        {% else %}
+                                            <div class="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                                                {{ item.group.name|first|upper }}
+                                            </div>
+                                        {% endif %}
+                                        
+                                        <div class="flex-1">
+                                            <div class="flex items-center space-x-2">
+                                                <h3 class="font-semibold text-gray-800">{{ item.group.name }}</h3>
+                                                <span class="text-xs px-2 py-1 rounded-full {% if item.membership.role == 'admin' %}bg-red-100 text-red-800{% elif item.membership.role == 'moderator' %}bg-yellow-100 text-yellow-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                                    {{ item.membership.get_role_display }}
+                                                </span>
+                                            </div>
+                                            <p class="text-gray-600 text-sm">{{ item.member_count }} участник{{ item.member_count|pluralize:"ов" }}</p>
+                                            {% if item.last_message %}
+                                                <p class="text-gray-600 text-sm truncate">
+                                                    {{ item.last_message.sender.username }}: {{ item.last_message.content }}
+                                                </p>
+                                                <p class="text-gray-400 text-xs">{{ item.last_message.timestamp|date:"d.m.Y H:i" }}</p>
+                                            {% else %}
+                                                <p class="text-gray-400 text-sm">Нет сообщений</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="flex space-x-2">
+                                        <a href="{% url 'group_room' item.group.id %}" class="bg-purple-600 text-white px-3 py-1 rounded text-sm hover:bg-purple-700 transition">
+                                            Открыть
+                                        </a>
+                                        {% if item.membership.role != 'admin' or item.member_count > 1 %}
+                                            <a href="{% url 'leave_group' item.group.id %}" class="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 transition" onclick="return confirm('Вы уверены, что хотите покинуть группу?')">
+                                                Выйти
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center text-gray-500 py-8">
+                        <p>Вы не состоите ни в одной группе</p>
+                        <p class="text-sm">Создайте новую группу или присоединитесь к существующей</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Публичные группы -->
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Публичные группы</h2>
+                
+                {% if public_groups %}
+                    <div class="space-y-3 max-h-96 overflow-y-auto">
+                        {% for group in public_groups %}
+                            <div class="p-3 border rounded-lg">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        {% if group.avatar %}
+                                            <img src="{{ group.avatar.url }}" alt="Аватар группы" class="w-8 h-8 rounded-full object-cover">
+                                        {% else %}
+                                            <div class="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                                                {{ group.name|first|upper }}
+                                            </div>
+                                        {% endif %}
+                                        <div>
+                                            <span class="text-gray-800 font-medium">{{ group.name }}</span>
+                                            <p class="text-gray-500 text-xs">{{ group.members.count }} участник{{ group.members.count|pluralize:"ов" }}</p>
+                                            {% if group.description %}
+                                                <p class="text-gray-600 text-xs truncate">{{ group.description }}</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <a href="{% url 'join_group' group.id %}" class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition">
+                                        Войти
+                                    </a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center text-gray-500 py-8">
+                        <p>Нет доступных публичных групп</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

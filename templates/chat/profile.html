@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto p-6">
+    <!-- Header профиля -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+            <div class="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
+                {% if profile.avatar %}
+                    <img src="{{ profile.avatar.url }}" alt="Аватар" class="w-20 h-20 rounded-full object-cover mx-auto sm:mx-0 flex-shrink-0">
+                {% else %}
+                    <div class="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto sm:mx-0 flex-shrink-0">
+                        {{ user.username|first|upper }}
+                    </div>
+                {% endif %}
+                <div class="text-center sm:text-left">
+                    <h1 class="text-2xl font-bold text-gray-800">{{ user.username }}</h1>
+                    <p class="text-gray-600">Участник с {{ join_date|date:"d.m.Y" }}</p>
+                    {% if profile.bio %}
+                        <p class="text-gray-700 mt-1 max-w-md">{{ profile.bio }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2 justify-center sm:justify-end">
+                <a href="{% url 'room' %}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition whitespace-nowrap">
+                    Общий чат
+                </a>
+                <a href="{% url 'private_chats' %}" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition whitespace-nowrap">
+                    Личные сообщения
+                </a>
+                <a href="{% url 'groups_list' %}" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition whitespace-nowrap">
+                    Группы
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Статистика -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div class="bg-white rounded-lg shadow-md p-6 text-center">
+            <div class="text-3xl font-bold text-blue-600">{{ total_messages }}</div>
+            <div class="text-gray-600">Сообщений</div>
+        </div>
+        <div class="bg-white rounded-lg shadow-md p-6 text-center">
+            <div class="text-3xl font-bold text-red-600">{{ profile.get_likes_count }}</div>
+            <div class="text-gray-600">Лайков получено</div>
+        </div>
+        <div class="bg-white rounded-lg shadow-md p-6 text-center">
+            <div class="text-3xl font-bold text-pink-600">{{ profile.get_given_likes_count }}</div>
+            <div class="text-gray-600">Лайков поставлено</div>
+        </div>
+        <div class="bg-white rounded-lg shadow-md p-6 text-center">
+            <div class="text-3xl font-bold text-green-600">{{ join_date|timesince }}</div>
+            <div class="text-gray-600">В сообществе</div>
+        </div>
+    </div>
+
+    <!-- Последние сообщения -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Мои последние сообщения</h2>
+        
+        {% if user_messages %}
+            <div class="space-y-4">
+                {% for message in user_messages %}
+                    <div class="border-l-4 border-blue-500 pl-4 py-2">
+                        <div class="flex justify-between items-start">
+                            <p class="text-gray-800">{{ message.content }}</p>
+                            <span class="text-sm text-gray-500 ml-4">{{ message.timestamp|date:"d.m.Y H:i" }}</span>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            {% if total_messages > 50 %}
+                <div class="mt-4 text-center text-gray-600">
+                    Показано последние 50 сообщений из {{ total_messages }}
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="text-center text-gray-500 py-8">
+                <p>Вы еще не отправили ни одного сообщения</p>
+                <a href="{% url 'room' %}" class="text-blue-600 hover:underline">Начать общение</a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Редактирование профиля -->
+    <div class="bg-white rounded-lg shadow-md p-6 mt-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Редактировать профиль</h2>
+        
+        {% if messages %}
+            {% for message in messages %}
+                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        <form method="post" enctype="multipart/form-data" class="space-y-4">
+            {% csrf_token %}
+            
+            <div>
+                <label class="block text-gray-700 font-semibold mb-2">Аватар</label>
+                <div class="flex items-center space-x-4">
+                    {% if profile.avatar %}
+                        <img src="{{ profile.avatar.url }}" alt="Текущий аватар" class="w-12 h-12 rounded-full object-cover">
+                    {% else %}
+                        <div class="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center text-gray-600">
+                            {{ user.username|first|upper }}
+                        </div>
+                    {% endif %}
+                    <div>
+                        {{ form.avatar }}
+                        <p class="text-sm text-gray-500 mt-1">Загрузите изображение (JPG, PNG, максимум 5MB)</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-gray-700 font-semibold mb-2">О себе</label>
+                {{ form.bio }}
+                <p class="text-sm text-gray-500 mt-1">Расскажите немного о себе (максимум 500 символов)</p>
+            </div>
+            
+            <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+                Сохранить изменения
+            </button>
+        </form>
+    </div>
+
+    <!-- Настройки аккаунта -->
+    <div class="bg-white rounded-lg shadow-md p-6 mt-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Информация об аккаунте</h2>
+        <div class="space-y-3">
+            <div class="flex justify-between items-center">
+                <span class="text-gray-700">Email:</span>
+                <span class="text-gray-600">{{ user.email|default:"Не указан" }}</span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-gray-700">Имя пользователя:</span>
+                <span class="text-gray-600">{{ user.username }}</span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-gray-700">Дата регистрации:</span>
+                <span class="text-gray-600">{{ join_date|date:"d.m.Y в H:i" }}</span>
+            </div>
+        </div>
+        
+        <div class="mt-6 pt-4 border-t">
+            <form method="post" action="{% url 'logout' %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">
+                    Выйти из аккаунта
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

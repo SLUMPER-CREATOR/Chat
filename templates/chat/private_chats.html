@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto p-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div class="flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-gray-800">Личные сообщения</h1>
+            <div class="flex space-x-3">
+                <a href="{% url 'room' %}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                    Общий чат
+                </a>
+                <a href="{% url 'profile' %}" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition">
+                    Профиль
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Список чатов -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Мои чаты</h2>
+                
+                {% if chat_data %}
+                    <div class="space-y-3">
+                        {% for item in chat_data %}
+                            <div class="border rounded-lg hover:shadow-md transition-shadow bg-white">
+                                <a href="{% url 'private_chat_room' item.chat.id %}" class="block p-4">
+                                    <div class="flex items-center space-x-4">
+                                        {% if item.other_user.userprofile.avatar %}
+                                            <img src="{{ item.other_user.userprofile.avatar.url }}" alt="Аватар" class="w-14 h-14 rounded-full object-cover flex-shrink-0">
+                                        {% else %}
+                                            <div class="w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                                                {{ item.other_user.username|first|upper }}
+                                            </div>
+                                        {% endif %}
+                                        
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-center justify-between mb-1">
+                                                <h3 class="font-semibold text-gray-800 truncate">{{ item.other_user.username }}</h3>
+                                                <div class="flex items-center space-x-2">
+                                                    {% if item.unread_count > 0 %}
+                                                        <span class="bg-red-500 text-white text-xs px-2 py-1 rounded-full">{{ item.unread_count }}</span>
+                                                    {% endif %}
+                                                    <span class="text-xs text-red-500">❤️ {{ item.other_user.received_likes.count }}</span>
+                                                </div>
+                                            </div>
+                                            {% if item.last_message %}
+                                                <p class="text-gray-600 text-sm truncate mb-1">
+                                                    {% if item.last_message.sender == user %}<span class="font-medium">Вы:</span> {% endif %}
+                                                    {{ item.last_message.content }}
+                                                </p>
+                                                <p class="text-gray-400 text-xs">{{ item.last_message.timestamp|date:"d.m.Y H:i" }}</p>
+                                            {% else %}
+                                                <p class="text-gray-400 text-sm">Нет сообщений</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center text-gray-500 py-8">
+                        <p>У вас пока нет личных чатов</p>
+                        <p class="text-sm">Выберите пользователя справа, чтобы начать общение</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Список пользователей -->
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Пользователи</h2>
+                
+                <div class="space-y-2 max-h-96 overflow-y-auto">
+                    {% for user_item in all_users %}
+                        <div class="bg-white border rounded-lg p-3 hover:shadow-md transition-shadow">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3 min-w-0 flex-1">
+                                    {% if user_item.userprofile.avatar %}
+                                        <img src="{{ user_item.userprofile.avatar.url }}" alt="Аватар" class="w-10 h-10 rounded-full object-cover flex-shrink-0">
+                                    {% else %}
+                                        <div class="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                                            {{ user_item.username|first|upper }}
+                                        </div>
+                                    {% endif %}
+                                    <div class="min-w-0 flex-1">
+                                        <a href="{% url 'user_profile' user_item.id %}" class="text-gray-800 hover:text-blue-600 font-medium block truncate">{{ user_item.username }}</a>
+                                        <div class="flex items-center space-x-1 text-xs text-gray-500">
+                                            <span>❤️ {{ user_item.received_likes.count }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col space-y-1 ml-2">
+                                    <a href="{% url 'start_private_chat' user_item.id %}" class="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700 transition whitespace-nowrap">
+                                        Написать
+                                    </a>
+                                    <a href="{% url 'user_profile' user_item.id %}" class="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition whitespace-nowrap">
+                                        Профиль
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

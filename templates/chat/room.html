@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<div class="flex flex-col h-screen max-w-6xl mx-auto bg-white shadow rounded-lg overflow-hidden">
+    <!-- Header -->
+    <div class="bg-blue-600 text-white p-4">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-2 sm:space-y-0">
+            <div class="flex items-center space-x-3">
+                <span class="font-bold text-lg">Общий чат сообщества</span>
+                <span class="text-sm bg-blue-500 px-2 py-1 rounded-full">Онлайн: <span id="online-count">0</span></span>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-sm font-medium">{{ user.username }}</span>
+                <div class="flex space-x-1">
+                    <a href="{% url 'groups_list' %}" class="bg-purple-500 hover:bg-purple-400 px-2 py-1 rounded text-xs transition whitespace-nowrap">
+                        Группы
+                    </a>
+                    <a href="{% url 'private_chats' %}" class="bg-green-500 hover:bg-green-400 px-2 py-1 rounded text-xs transition whitespace-nowrap">
+                        Личные
+                    </a>
+                    <a href="{% url 'profile' %}" class="bg-blue-500 hover:bg-blue-400 px-2 py-1 rounded text-xs transition whitespace-nowrap">
+                        Профиль
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Список онлайн -->
+        <div class="w-1/4 border-r bg-gray-50 p-4 hidden lg:block">
+            <div class="sticky top-0">
+                <h3 class="font-semibold text-gray-700 mb-3 text-sm uppercase tracking-wide">Онлайн ({{ online_users|length }})</h3>
+                <ul id="online-list" class="space-y-2 max-h-96 overflow-y-auto">
+                    {% for username in online_users %}
+                        <li class="flex items-center p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                            <span class="w-2 h-2 bg-green-500 rounded-full mr-3 flex-shrink-0"></span>
+                            <span class="text-sm text-gray-700 truncate">{{ username }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- Чат -->
+        <div class="flex-1 flex flex-col">
+            <div id="chat-box" class="flex-1 overflow-y-auto p-4 bg-gray-50">
+                {% for msg in messages %}
+                    <div class="mb-4 p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                        <div class="flex items-start space-x-3">
+                            {% if msg.user.userprofile and msg.user.userprofile.avatar %}
+                                <img src="{{ msg.user.userprofile.avatar.url }}" alt="Аватар" class="w-10 h-10 rounded-full object-cover flex-shrink-0">
+                            {% else %}
+                                <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                                    {{ msg.user.username|first|upper }}
+                                </div>
+                            {% endif %}
+                            <div class="flex-1 min-w-0">
+                                <div class="flex flex-wrap items-center gap-2 mb-1">
+                                    <a href="{% url 'user_profile' msg.user.id %}" class="font-semibold text-blue-600 hover:text-blue-800 truncate">{{ msg.user.username }}</a>
+                                    <span class="text-xs text-gray-500 whitespace-nowrap">{{ msg.timestamp|date:"H:i" }}</span>
+                                    <span class="text-xs text-red-500 flex items-center whitespace-nowrap">
+                                        <span class="mr-1">❤️</span>{{ msg.user.received_likes.count }}
+                                    </span>
+                                </div>
+                                <p class="text-gray-800 break-words">{{ msg.content }}</p>
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="text-center text-gray-500 py-8">
+                        <p>Пока нет сообщений. Начните общение!</p>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="border-t bg-white p-4">
+                <form id="chat-form" class="flex space-x-2">
+                    <input type="text" id="chat-input" class="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Напишите сообщение..." autocomplete="off">
+                    <button type="submit" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium whitespace-nowrap">
+                        Отправить
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const chatBox = document.getElementById('chat-box');
+    const chatForm = document.getElementById('chat-form');
+    const chatInput = document.getElementById('chat-input');
+    const onlineList = document.getElementById('online-list');
+    const onlineCount = document.getElementById('online-count');
+
+    const username = "{{ user.username }}";
+    const userAvatarUrl = {% if user_profile.avatar %}"{{ user_profile.avatar.url }}"{% else %}null{% endif %};
+    console.log('Текущий пользователь:', username);
+    console.log('Аватарка пользователя:', userAvatarUrl);
+    
+    {% if not user.is_authenticated %}
+        console.error('Пользователь не авторизован!');
+        alert('Вы не авторизованы. Перенаправляем на страницу входа...');
+        window.location.href = '/accounts/login/';
+    {% endif %}
+
+    // Прокрутка
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    // WebSocket
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const socket = new WebSocket(
+        wsProtocol + '//' + window.location.host + '/ws/chat/'
+    );
+    console.log('Подключаемся к WebSocket:', wsProtocol + '//' + window.location.host + '/ws/chat/');
+
+    socket.onopen = function(e) {
+        console.log('WebSocket соединение установлено');
+    };
+
+    socket.onclose = function(e) {
+        console.log('WebSocket соединение закрыто');
+    };
+
+    socket.onerror = function(e) {
+        console.log('Ошибка WebSocket:', e);
+    };
+
+    socket.onmessage = function(e) {
+        console.log('Получено сообщение:', e.data);
+        const data = JSON.parse(e.data);
+        if (data.type === 'message') {
+            const div = document.createElement('div');
+            div.className = 'mb-4 p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow fade-in';
+            
+            // Создать аватарку или инициал
+            let avatarHtml;
+            if (data.avatar_url) {
+                avatarHtml = `<img src="${data.avatar_url}" alt="Аватар" class="w-10 h-10 rounded-full object-cover flex-shrink-0">`;
+            } else {
+                avatarHtml = `<div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                    ${data.username.charAt(0).toUpperCase()}
+                </div>`;
+            }
+            
+            div.innerHTML = `
+                <div class="flex items-start space-x-3">
+                    ${avatarHtml}
+                    <div class="flex-1 min-w-0">
+                        <div class="flex flex-wrap items-center gap-2 mb-1">
+                            <span class="font-semibold text-blue-600 truncate">${data.username}</span>
+                            <span class="text-xs text-gray-500 whitespace-nowrap">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span class="text-xs text-red-500 flex items-center whitespace-nowrap">
+                                <span class="mr-1">❤️</span>0
+                            </span>
+                        </div>
+                        <p class="text-gray-800 break-words">${data.message}</p>
+                    </div>
+                </div>
+            `;
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+        else if (data.type === 'online_users') {
+            // Обновить список онлайн
+            onlineList.innerHTML = '';
+            onlineCount.textContent = data.users.length;
+            data.users.forEach(user => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center';
+                li.innerHTML = `<span class="w-2 h-2 bg-green-500 rounded-full mr-2"></span>${user}`;
+                onlineList.appendChild(li);
+            });
+        }
+    };
+
+    function sendMessage() {
+        const message = chatInput.value.trim();
+        if (message) {
+            console.log('Отправляем сообщение:', message);
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    'message': message,
+                    'username': username
+                }));
+                chatInput.value = '';
+            } else {
+                console.log('WebSocket не подключен. Состояние:', socket.readyState);
+                alert('Соединение с сервером потеряно. Обновите страницу.');
+            }
+        }
+    }
+
+    chatForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        sendMessage();
+    });
+
+    chatInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+</script>
+<script>
+    // ... предыдущий код ...
+
+    // Запросить разрешение на уведомления при первом входе
+    let notificationsAllowed = false;
+
+    if (window.Notification && Notification.permission === "granted") {
+        notificationsAllowed = true;
+    } else if (window.Notification) {
+        // Можно показать кнопку "Разрешить уведомления", но для простоты запросим при первом сообщении
+    }
+
+    // Функция показа уведомления
+    function showNotification(username, message) {
+        if (!document.hasFocus() || document.visibilityState === 'hidden') {
+            // Только если вкладка неактивна
+
+            // 1. Звук (опционально)
+            // const audio = new Audio("notification.mp3");
+            // audio.play().catch(e => console.log("Звук заблокирован:", e));
+
+            // 2. Web Notification
+            if (window.Notification && Notification.permission === "granted") {
+                new Notification(`Новое сообщение от ${username}`, {
+                    body: message
+                    // icon: "chat-icon.png", // опционально
+                    // badge: "badge.png"
+                });
+            } else if (Notification.permission !== "denied") {
+                // Запросить разрешение при первом уведомлении
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        new Notification(`Новое сообщение от ${username}`, {
+                            body: message
+                        });
+                    }
+                });
+            }
+
+            // 3. Мигающий заголовок
+            let originalTitle = document.title;
+            let isFlashing = false;
+            let flashInterval = setInterval(() => {
+                document.title = isFlashing ? `(${username}) Новое сообщение!` : originalTitle;
+                isFlashing = !isFlashing;
+            }, 1000);
+
+            // Остановить мигание при возврате на вкладку
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    clearInterval(flashInterval);
+                    document.title = originalTitle;
+                }
+            });
+        }
+    }
+
+    socket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        if (data.type === 'message') {
+            const div = document.createElement('div');
+            div.className = 'mb-3';
+            div.innerHTML = `
+                <span class="font-semibold text-blue-600">${data.username}</span>
+                <span class="text-xs text-gray-500 ml-2">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                <p class="mt-1">${data.message}</p>
+            `;
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // Показать уведомление, если сообщение не от текущего пользователя
+            if (data.username !== username) {
+                showNotification(data.username, data.message);
+            }
+        }
+        else if (data.type === 'online_users') {
+            // ... без изменений ...
+        }
+    };
+
+    // ... остальной код ...
+</script>
+{% endblock %}

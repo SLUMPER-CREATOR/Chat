@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+</head>
+<body>
+    <h1>WebSocket Connection Test</h1>
+    <div id="status">Подключение...</div>
+    <div id="messages"></div>
+    <input type="text" id="messageInput" placeholder="Введите сообщение">
+    <button onclick="sendMessage()">Отправить</button>
+
+    <script>
+        const status = document.getElementById('status');
+        const messages = document.getElementById('messages');
+        const messageInput = document.getElementById('messageInput');
+
+        console.log('Начинаем тест WebSocket...');
+        
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = wsProtocol + '//' + window.location.host + '/ws/chat/';
+        
+        console.log('WebSocket URL:', wsUrl);
+        status.innerHTML = 'Подключаемся к: ' + wsUrl;
+
+        const socket = new WebSocket(wsUrl);
+
+        socket.onopen = function(e) {
+            console.log('WebSocket открыт');
+            status.innerHTML = 'Соединение установлено!';
+            status.style.color = 'green';
+        };
+
+        socket.onclose = function(e) {
+            console.log('WebSocket закрыт:', e.code, e.reason);
+            status.innerHTML = 'Соединение закрыто. Код: ' + e.code + ', Причина: ' + e.reason;
+            status.style.color = 'red';
+        };
+
+        socket.onerror = function(e) {
+            console.log('Ошибка WebSocket:', e);
+            status.innerHTML = 'Ошибка соединения';
+            status.style.color = 'red';
+        };
+
+        socket.onmessage = function(e) {
+            console.log('Получено сообщение:', e.data);
+            const div = document.createElement('div');
+            div.textContent = 'Получено: ' + e.data;
+            messages.appendChild(div);
+        };
+
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message && socket.readyState === WebSocket.OPEN) {
+                console.log('Отправляем:', message);
+                socket.send(JSON.stringify({
+                    'message': message,
+                    'username': 'testuser'
+                }));
+                messageInput.value = '';
+            } else {
+                console.log('WebSocket не готов. Состояние:', socket.readyState);
+            }
+        }
+
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>

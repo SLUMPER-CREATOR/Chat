@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto p-6">
+    <!-- Header профиля -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+            <div class="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-6">
+                {% if profile.avatar %}
+                    <img src="{{ profile.avatar.url }}" alt="Аватар" class="w-24 h-24 rounded-full object-cover mx-auto sm:mx-0 flex-shrink-0">
+                {% else %}
+                    <div class="w-24 h-24 bg-blue-600 rounded-full flex items-center justify-center text-white text-3xl font-bold mx-auto sm:mx-0 flex-shrink-0">
+                        {{ target_user.username|first|upper }}
+                    </div>
+                {% endif %}
+                
+                <div class="text-center sm:text-left">
+                    <h1 class="text-3xl font-bold text-gray-800">{{ target_user.username }}</h1>
+                    <p class="text-gray-600 mt-1">Участник с {{ join_date|date:"d.m.Y" }}</p>
+                    {% if profile.bio %}
+                        <p class="text-gray-700 mt-2 max-w-md">{{ profile.bio }}</p>
+                    {% endif %}
+                    
+                    <!-- Лайки -->
+                    <div class="flex items-center justify-center sm:justify-start space-x-2 mt-3">
+                        <span class="text-red-500">❤️</span>
+                        <span id="likes-count" class="font-semibold">{{ likes_count }}</span>
+                        <span class="text-gray-600">лайк{{ likes_count|pluralize:"ов" }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex flex-col space-y-3 w-full sm:w-auto">
+                <!-- Кнопка лайка -->
+                {% if target_user != user %}
+                    <button id="like-btn" onclick="toggleLike({{ target_user.id }})" 
+                            class="flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition {% if is_liked %}bg-red-500 text-white{% else %}bg-gray-200 text-gray-700 hover:bg-gray-300{% endif %}">
+                        <span>{% if is_liked %}❤️{% else %}🤍{% endif %}</span>
+                        <span id="like-text">{% if is_liked %}Убрать лайк{% else %}Лайк{% endif %}</span>
+                    </button>
+                {% endif %}
+                
+                <!-- Кнопка написать -->
+                {% if target_user != user %}
+                    <a href="{% url 'start_private_chat' target_user.id %}" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-center whitespace-nowrap">
+                        Написать сообщение
+                    </a>
+                {% endif %}
+                
+                <!-- Навигация -->
+                <div class="flex space-x-2">
+                    <a href="{% url 'private_chats' %}" class="flex-1 bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 transition text-center">
+                        Назад
+                    </a>
+                    {% if target_user == user %}
+                        <a href="{% url 'profile' %}" class="flex-1 bg-gray-600 text-white px-3 py-2 rounded text-sm hover:bg-gray-700 transition text-center">
+                            Редактировать
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Статистика -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="bg-white rounded-lg shadow-md p-6 text-center">
+            <div class="text-3xl font-bold text-blue-600">{{ total_messages }}</div>
+            <div class="text-gray-600">Сообщений</div>
+        </div>
+        <div class="bg-white rounded-lg shadow-md p-6 text-center">
+            <div class="text-3xl font-bold text-red-600">{{ likes_count }}</div>
+            <div class="text-gray-600">Лайков</div>
+        </div>
+        <div class="bg-white rounded-lg shadow-md p-6 text-center">
+            <div class="text-3xl font-bold text-purple-600">{{ user_groups.count }}</div>
+            <div class="text-gray-600">Групп</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Последние сообщения -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Последние сообщения</h2>
+            
+            {% if user_messages %}
+                <div class="space-y-3 max-h-96 overflow-y-auto">
+                    {% for message in user_messages %}
+                        <div class="border-l-4 border-blue-500 pl-4 py-2">
+                            <p class="text-gray-800">{{ message.content }}</p>
+                            <span class="text-sm text-gray-500">{{ message.timestamp|date:"d.m.Y H:i" }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center text-gray-500 py-8">
+                    <p>Пользователь еще не отправил сообщений</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Группы -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Публичные группы</h2>
+            
+            {% if user_groups %}
+                <div class="space-y-3">
+                    {% for group in user_groups %}
+                        <div class="flex items-center justify-between p-3 border rounded-lg">
+                            <div class="flex items-center space-x-3">
+                                {% if group.avatar %}
+                                    <img src="{{ group.avatar.url }}" alt="Аватар группы" class="w-8 h-8 rounded-full object-cover">
+                                {% else %}
+                                    <div class="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                                        {{ group.name|first|upper }}
+                                    </div>
+                                {% endif %}
+                                <div>
+                                    <span class="font-medium">{{ group.name }}</span>
+                                    <p class="text-sm text-gray-500">{{ group.members.count }} участник{{ group.members.count|pluralize:"ов" }}</p>
+                                </div>
+                            </div>
+                            {% if user in group.members.all %}
+                                <a href="{% url 'group_room' group.id %}" class="bg-purple-600 text-white px-3 py-1 rounded text-sm hover:bg-purple-700 transition">
+                                    Открыть
+                                </a>
+                            {% else %}
+                                <a href="{% url 'join_group' group.id %}" class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition">
+                                    Войти
+                                </a>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center text-gray-500 py-8">
+                    <p>Пользователь не состоит в публичных группах</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleLike(userId) {
+    fetch(`/chat/like/${userId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+        
+        // Обновить кнопку лайка
+        const likeBtn = document.getElementById('like-btn');
+        const likeText = document.getElementById('like-text');
+        const likesCount = document.getElementById('likes-count');
+        
+        if (data.liked) {
+            likeBtn.className = 'flex items-center space-x-2 px-4 py-2 rounded-lg transition bg-red-500 text-white';
+            likeBtn.innerHTML = '<span>❤️</span><span id="like-text">Убрать лайк</span>';
+        } else {
+            likeBtn.className = 'flex items-center space-x-2 px-4 py-2 rounded-lg transition bg-gray-200 text-gray-700 hover:bg-gray-300';
+            likeBtn.innerHTML = '<span>🤍</span><span id="like-text">Лайк</span>';
+        }
+        
+        // Обновить счетчик
+        likesCount.textContent = data.likes_count;
+        
+        // Показать уведомление
+        showNotification(data.message);
+    })
+    .catch(error => {
+        console.error('Ошибка:', error);
+        alert('Произошла ошибка при обработке лайка');
+    });
+}
+
+function showNotification(message) {
+    // Создать уведомление
+    const notification = document.createElement('div');
+    notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    // Убрать через 3 секунды
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+// Добавить CSRF токен для AJAX запросов
+document.addEventListener('DOMContentLoaded', function() {
+    if (!document.querySelector('[name=csrfmiddlewaretoken]')) {
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = 'csrfmiddlewaretoken';
+        csrfToken.value = '{{ csrf_token }}';
+        document.body.appendChild(csrfToken);
+    }
+});
+</script>
+{% endblock %}
